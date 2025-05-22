@@ -35,7 +35,7 @@ typedef enum start_mode { CLIENT, SERVER } start_mode;
  */
 typedef struct mic_tcp_ip_addr
 {
-    char * addr;
+    char * addr; 
     int addr_size;
 } mic_tcp_ip_addr;
 
