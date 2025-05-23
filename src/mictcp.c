@@ -207,8 +207,8 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
 
    // Vérifie si le PDU était destiné à un de nos sockets
    int found = -1;
-   for(int i = 0; i <= last_used_socket; i++) {
-      if (socket_list[i].addr.port == pdu.header.dest_port) {
+   for(int i = 0; i < last_used_socket; i++) {
+      if (socket_list[i].local_addr.port == pdu.header.dest_port) {
          found = i; // On a trouvé le socket correspondant
          break;
       }
@@ -228,8 +228,8 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
    //! Envoyer un acquittement ACK
    mic_tcp_pdu pdu_ack;
    // On inverse les ports source et destination
-   pdu_ack.header.src_port = pdu.header.dest_port;
-   pdu_ack.header.dest_port = pdu.header.src_port;
+   pdu_ack.header.source_port = pdu.header.dest_port;
+   pdu_ack.header.dest_port = pdu.header.source_port;
    pdu_ack.header.seq_num = next_sequence[found]; // Numéro de séquence du PDU
    pdu_ack.header.ack = 1; // On met le bit ACK à 1
    pdu_ack.header.syn = 0;
