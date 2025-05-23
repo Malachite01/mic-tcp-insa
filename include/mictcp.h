@@ -76,7 +76,8 @@ typedef struct mic_tcp_header
   unsigned short source_port; /* numéro de port source */
   unsigned short dest_port; /* numéro de port de destination */
   unsigned int seq_num; /* numéro de séquence */
-  unsigned int ack_num; /* numéro d'acquittement */
+  unsigned int ack_num; /* numéro d'acquittement, 
+  inutile pour nous, car on peut identifier un pdu seulement avec son num seq */
   unsigned char syn; /* flag SYN (valeur 1 si activé et 0 si non) */
   unsigned char ack; /* flag ACK (valeur 1 si activé et 0 si non) */
   unsigned char fin; /* flag FIN (valeur 1 si activé et 0 si non) */
