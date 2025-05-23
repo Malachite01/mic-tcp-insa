@@ -38,4 +38,3 @@ if [ "$sourc" = true ]; then
     ./client $dest $port
     cd ..
 fi
-
