@@ -5,9 +5,8 @@
 #define MAX_TIMEOUT 100 // Timeout pour la réception d'un ACK en µs
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
-int last_used_socket = -1; // Dernier socket utilisé
+int last_used_socket = 0; // Dernier socket utilisé
 int next_sequence[MAX_SOCKETS] = {0}; // Numéro de séquence du prochain PDU à émettre
-
 
 /*
  * Fonction d'affichage du nom de la fonction
@@ -32,10 +31,39 @@ int verif_socket(int socket) {
  * Fonction de vérification de la validité d'une adresse
  * Retourne 0 si l'adresse est valide, -1 sinon
  */
-// TODO: à compléter, surtout les vérifications sur l'adresse IP
-//TODO: exemple || addr.ip.addr_size == 0
 int verif_address(mic_tcp_sock_addr addr) {
-   if(addr.port <= 1024) return -1;
+   // Vérifie que le port est valide (> 1024)
+   if (addr.port <= 1024) return -1;
+
+   // Vérifie que la taille de l'adresse IP est non nulle
+   if (addr.ip_addr.addr_size == 0 || addr.ip_addr.addr == NULL) return -1;
+
+   // On copie l'adresse IP
+   char ip_copy[addr.ip_addr.addr_size + 1];
+   strncpy(ip_copy, addr.ip_addr.addr, addr.ip_addr.addr_size);
+   ip_copy[addr.ip_addr.addr_size] = '\0'; // Ajoute le caractère de fin de chaîne
+
+   // Compte le nombre de segments dans l'adresse IP
+   int segments = 0;
+   char* token = strtok(ip_copy, "."); // On découpe l'adresse IP en segments
+
+   while (token != NULL) {
+      // Convertit le segment en entier
+      char* endptr;
+      long value = strtol(token, &endptr, 10);
+
+      // Vérifie que la conversion est valide et dans l'intervalle 0-255
+      if (*endptr != '\0' || value < 0 || value > 255) {
+         return -1;
+      }
+
+      segments++;
+      token = strtok(NULL, ".");
+   }
+
+   // Vérifie qu'on a exactement 4 segments
+   if (segments != 4) return -1;
+
    return 0;
 }
 
@@ -52,12 +80,13 @@ int mic_tcp_socket(start_mode sm){
    // Verifie si la liste de sockets est pleine
    if (last_used_socket > MAX_SOCKETS) return -1;
    
-   last_used_socket++;
    socket_list[last_used_socket].fd = last_used_socket;
    socket_list[last_used_socket].state = CLOSED;
-   
+   int socket = last_used_socket; // On récupère le descripteur du socket
+   last_used_socket++;
+
    // Retourne le descripteur du socket ou -1 en cas d'erreur
-   return result == -1 ? result : last_used_socket;
+   return result == -1 ? result : socket;
 }
 
 /*
@@ -71,6 +100,7 @@ int mic_tcp_bind(int socket, mic_tcp_sock_addr addr) {
    if (verif_socket(socket) == 0 && verif_address(addr) == 0) {
       // Attribue addr au socket
       socket_list[socket].local_addr = addr; /* On attribue l'adresse au socket */
+      printf("[MIC-TCP] Socket %d lié à l'adresse %s:%d\n", socket, addr.ip_addr.addr, addr.port);
       return 0;
    }
    return -1;
@@ -116,8 +146,14 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
    // Création du PDU Ack pour la réponse
    mic_tcp_pdu pdu, pdu_ack;
    int effective_ip_send = -1; // Variable pour stocker le résultat de l'envoi sur la couche IP
-   mic_tcp_ip_addr local_addr_ack, remote_addr_ack; // Variables pour stocker les adresses IP locales et distantes du PDU ACK
 
+   // Variables pour stocker les adresses IP locales et distantes du PDU
+   mic_tcp_ip_addr local_addr_ack, remote_addr_ack; // Variables pour stocker les adresses IP locales et distantes du PDU ACK
+   local_addr_ack.addr = malloc(sizeof(char) * 16); // Allocation de mémoire pour l'adresse IP locale
+   local_addr_ack.addr_size = 16; // Taille de l'adresse IP locale
+   remote_addr_ack.addr = malloc(sizeof(char) * 16); // Allocation de mémoire pour l'adresse IP distante
+   remote_addr_ack.addr_size = 16; // Taille de l'adresse IP distante
+   
    //! Remplissage du PDU HEADER
    //mettre le numero de port local source associé a mon_socket
    pdu.header.source_port = socket_list[mic_sock].local_addr.port;
@@ -132,16 +168,20 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
    //! Remplissage du PDU PAYLOAD
    pdu.payload.data = mesg; // On met le message dans le payload
    pdu.payload.size = mesg_size; // On met la taille du message dans le payload
-   
+   pdu_ack.payload.size = 0; // Pas de données dans le PDU ACK
+
    int ack_received = 0;
    while (ack_received == 0) {
+      printf("[MIC-TCP] Envoi du PDU avec numéro de séquence, avant send : %d\n", pdu.header.seq_num);
       //? Envoi du PDU sur la couche IP 
       effective_ip_send = IP_send(pdu, socket_list[mic_sock].remote_addr.ip_addr); // On envoie le PDU sur la couche IP
       if (effective_ip_send == -1) return -1; // Erreur lors de l'envoi du PDU
 
       //? Attente d'un ACK avec timeout
+      printf("[MIC-TCP] avant recv : %d\n", pdu_ack.header.seq_num);
       int recv_status = IP_recv(&pdu_ack, &local_addr_ack, &remote_addr_ack, MAX_TIMEOUT); // On attend le PDU ACK sur la couche IP
-      
+
+      printf("[MIC-TCP] numéro de séquence ACK recu : %d\n", pdu_ack.header.seq_num);
       //? On vérifie si le PDU_ACK reçu à un numéro de séquence valide
       if (recv_status != -1 
          && pdu_ack.header.ack == 1
@@ -207,7 +247,7 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
 
    // Vérifie si le PDU était destiné à un de nos sockets
    int found = -1;
-   for(int i = 0; i < last_used_socket; i++) {
+   for (int i = 0; i < MAX_SOCKETS && i < last_used_socket; i++) {
       if (socket_list[i].local_addr.port == pdu.header.dest_port) {
          found = i; // On a trouvé le socket correspondant
          break;
@@ -218,13 +258,14 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
       return; //on ne fait rien si le PDU n'est pas pour nous
    }
 
+   printf("[MIC-TCP] PDU reçu pour le socket %d, numéro de séquence : %d\n", found, next_sequence[found]);
    //! Verifier le num de sequence du PDU
    if (pdu.header.seq_num == next_sequence[found]) {
       // On met le PDU dans le buffer de réception du socket
       app_buffer_put(pdu.payload);
       next_sequence[found]++; // On incrémente le numéro de séquence du prochain PDU à émettre
    }
-   
+   printf("[MIC-TCP] PDU traité pour le socket %d, numéro de séquence : %d\n", found, next_sequence[found]);
    //! Envoyer un acquittement ACK
    mic_tcp_pdu pdu_ack;
    // On inverse les ports source et destination
@@ -234,5 +275,6 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
    pdu_ack.header.ack = 1; // On met le bit ACK à 1
    pdu_ack.header.syn = 0;
    pdu_ack.header.fin = 0;
+   pdu_ack.payload.size = 0; // Pas de données dans le PDU ACK
    IP_send(pdu_ack, remote_addr); // On envoie le PDU ACK sur la couche IP
 }
