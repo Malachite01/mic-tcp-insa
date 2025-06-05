@@ -1,89 +1,83 @@
-# BE RESEAU
-## TPs BE Reseau - 3 MIC
+# BE-RESEAU-MIC-TCPV2
 
-Les détails du sujet du BE est accessible depuis le cours "Programmation Système et Réseau" sur moodle.
+MIC-TCP est une implémentation simplifiée du protocole TCP écrite en C. Ce projet a pour but de simuler les mécanismes de base de TCP (numéros de séquence, acquittements, gestion des connexions, etc.).
 
+## 📌 Objectifs
 
-## Contenu du dépôt « template » fourni
-Ce dépôt inclut le code source initial fourni pour démarrer le BE. Plus précisément : 
-  - README.md (ce fichier) qui notamment décrit la préparation de l’environnement de travail et le suivi des versions de votre travail; 
-  - tsock_texte et tsock_video : lanceurs pour les applications de test fournies. 
-  - dossier include : contenant les définitions des éléments fournis que vous aurez à manipuler dans le cadre du BE.
-  - dossier src : contenant l'implantation des éléments fournis et à compléter dans le cadre du BE.
-  - src/mictcp.c : fichier au sein duquel vous serez amenés à faire l'ensemble de vos contributions (hors bonus éventuels). 
+- Implémenter une pile TCP minimale au-dessus d’une couche IP simulée
+- Gérer la création de sockets, la liaison (`bind`), la connexion (`connect`)
+- Assurer l’envoi et la réception de données avec fiabilité (modèle Stop & Wait)
+- Gérer les acquittements (ACK) et les numéros de séquence
+- Simuler des pertes de paquets et prévoir un retransfert
+- Comprendre les principes de base des protocoles orientés connexion
 
+## 🧱 Architecture
 
-## Création du dépôt mictcp 
+Le projet est structuré autour de plusieurs fonctions principales :
 
-1. Création d’un compte git étudiant : Si vous ne disposez pas d’un compte git, connectez vous sur http://github.com/ et créez un compte par binôme. 
+### Initialisation et gestion des sockets
 
-2. Afin d’être capable de mettre à jour le code que vous aurez produit sur le dépôt central Github, il vous faudra créer un jeton d’accès qui jouera le rôle de mot de passe. Veuillez le sauvegarder, car il vous le sera demandé lors de l'accès au dépôt central. Pour ce faire, veuillez suivre les étapes décrites : https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
+- `mic_tcp_socket()`: Crée un socket MIC-TCP
+- `mic_tcp_bind()`: Lie une adresse locale à un socket
+- `mic_tcp_connect()`: Établit une connexion à un hôte distant
+- `mic_tcp_accept()`: Accepte une connexion entrante (modèle simplifié)
+- `mic_tcp_close()`: Ferme un socket et libère les ressources
 
-3. Création d’un dépôt Etudiant sur GitHub pour le BE Reseau
-  
-   Créer une copie du dépôt template enseignant : https://github.com/rezo-insat/mictcp, en vous y rendant et en cliquant sur le bouton « use this template » situé dans le coin en haut, plutôt à droite de la page. Il est demandé de le choisir comme dépôt privé. Il est impératif pour les corrections que vous rajoutiez le compte : rezo-insat comme collaborateur afin de permettre à vos enseignants d'accéder à votre dépôt. Pour ce faire, sélectionner le bouton "settings" puis "collaborators" et rajouter comme utilisateur : rezo-insat. La marche à suivre est décrite ci-après : https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories/adding-outside-collaborators-to-repositories-in-your-organization
+### Transmission de données
 
+- `mic_tcp_send()`: Envoie une donnée avec gestion des numéros de séquence et des acquittements
+- `mic_tcp_recv()`: Reçoit une donnée depuis le buffer applicatif
 
-4. Créer un clone local de votre dépôt Github, i.e. une copie locale du dépôt sur votre compte insa. 
-  
-    cliquer sur le bouton « code » de votre dépôt, copier l’URL qui permet de l’identifier. 
-	Ouvrir un terminal de votre machine. En vous plaçant dans le répertoire de travail de votre choix, taper depuis le terminal :
+### Réception des PDU
 
-        git clone <url de votre dépôt>
+- `process_received_PDU()`: Fonction appelée à la réception d’un PDU MIC-TCP. Elle traite le numéro de séquence, stocke les données, et envoie un ACK si nécessaire.
 
-    Vous avez désormais une copie locale de votre dépôt, que vous pouvez mettre à jour et modifier à volonté au gré de votre avancement sur les TPs. 
+## 🔍 Validation et sécurité
 
-5. Afin de nous permettre d’avoir accès à votre dépôt, merci de bien vouloir renseigner l'URL de votre dépôt sur le fichier accessible depuis le lien "fichier URLs dépôts étudiants" se trouvant sur moodle (au niveau de la section: BE Reseau).
+Deux fonctions vérifient la validité des entrées :
 
-## Compilation du protocole mictcp et lancement des applications de test fournies
+- `verif_socket()`: Vérifie la validité d’un socket (bornes, existence)
+- `verif_address()`: Vérifie qu’une adresse IP contient **4 segments entre 0 et 255** et que le **port > 1024**
 
-Pour compiler mictcp et générer les exécutables des applications de test depuis le code source fourni, taper :
+## 🧪 Simulateur réseau
 
-    make
+La communication IP simulée est assurée par des appels à :
 
-Deux applicatoins de test sont fournies, tsock_texte et tsock_video, elles peuvent être lancées soit en mode puits, soit en mode source selon la syntaxe suivante:
+- `IP_send(pdu, ip_addr)`
+- `IP_recv(pdu, local_addr, remote_addr, timeout)`
 
-    Usage: ./tsock_texte [-p|-s destination] port
-    Usage: ./tsock_video [[-p|-s] [-t (tcp|mictcp)]
+Le taux de perte peut être configuré avec `set_loss_rate()` pour tester la fiabilité du protocole.
 
-Seul tsock_video permet d'utiliser, au choix, votre protocole mictcp ou une émulation du comportement de tcp sur un réseau avec pertes.
+## 📁 Dépendances
 
-## Suivi de versions de votre travail
+- `mictcp.h` : Interface de programmation principale
+- `api/mictcp_core.h` : Contient les appels à la couche IP simulée
+- `lib-mictcp` : Composants internes simulés (buffers, IP, logiques réseau)
 
-Vous pouvez travailler comme vous le souhaitez sur le contenu du répertoire local. Vous pouvez mettre à jour les fichiers existants, rajouter d’autres ainsi que des dossiers et en retirer certains à votre guise. 
+## 🛠 Compilation
 
-Pour répercuter les changements que vous faites sur votre répertoire de travail local sur le dépôt central GitHub, sur votre terminal, taper :
- 
-    git add .
-    git commit -m «un message décrivant la mise à jour»
-    git push
+Inclure les fichiers `.c` nécessaires dans un Makefile ou compiler manuellement :
 
-- Marquage des versions successives de votre travail sur mictcp 
- 
-Lorsque vous le souhaitez, git permet d'associer une étiquette à un état précis de votre dépôt par l'intermédiaires de tags. Il vous est par exemple possible d'utiliser ce mécanisme pour marquer (et par conséquence pouvoir retrouver) l'état de votre dépôt pour chacune des versions successives de votre travail sur mictcp.
+```bash
+make
+```
 
-Pour Créer un tag « v1 » et l'associer à l'état courrant de votre dépôt, vous taperez la commande suivante sur votre terminal :
+## 📚 Exemple d'utilisation
+Ce programme peut être testé avec tsock (en texte ou vidéo). Pour tester le puits (serveur) en mode texte, avec le port 9000:
+```bash
+./tsock_texte -p 9000
+```
 
-    git tag v1
+Pour envoyer un message au puits :
+```bash
+./tsock_texte -s 127.0.0.1 9000
+```
+puis en mode interactif, vous pouvez envoyer des messages.
 
-Pour lister les tags existants au sein de votre dépôt
+pour la vidéo :
+//TODO
 
-    git tag -l
-
-Pour transférer les tags de votre dépôt local vers le dépôt central sur github:
-
-    git push origin --tags
-
-
-Ceci permettra à votre enseignant de positionner le dépôt dans l'état ou il était au moment du marquage avec chacun des tags que vous définissez. 
-   
-## Suivi de votre avancement 
-
-Veuillez utiliser, à minima, un tag pour chacune des versions successives de mictcp qui sont définies au sein du sujet du BE disponible sous moodle.
-
-
-## Liens utiles 
-
-Aide pour la création d’un dépôt depuis un template : https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template
-
-Manuel d'utilisation de git: https://git-scm.com/docs
+## 👨‍💻 Auteurs
+Projet réalisé dans le cadre du module [BE Réseaux] a l'INSA Toulouse.
+Mathieu ANTUNES
+Enzo MARIETTI

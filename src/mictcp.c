@@ -1,7 +1,7 @@
 #include <mictcp.h>
 #include <api/mictcp_core.h>
 
-#define MAX_SOCKETS 1024
+#define MAX_SOCKETS 1024 // Nombre maximum de sockets MIC-TCP
 #define MAX_TIMEOUT 100 // Timeout pour la réception d'un ACK en µs
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
