@@ -72,6 +72,27 @@ Pour envoyer un message au puits (client), vous pouvez utiliser la commande suiv
 puis en mode interactif, vous pouvez envoyer des messages.
 
 ### Vidéo
+> [!WARNING]  
+> Dans le cas ou vous obtenez l'erreur `src/apps/gateway.c:344 [read_rtp_packet()] -> Buffer is too small to store the packet`, il s'agit d'un problème de lien symbolique, que vous pouvez corriger en recréant les liens de la vidéo que vous voulez visioner :
+
+> [!NOTE]  
+> Pour réellement visionner la vidéo, vlc est nécessaire.
+> ```bash
+> vlc --version
+VLC media player 3.0.16 Vetinari (revision 3.0.13-8-g41878ff4f2)
+VLC version 3.0.16 Vetinari (3.0.13-8-g41878ff4f2)
+Compiled by buildd on lcy02-amd64-108.buildd (Mar 13 2022 08:00:10)
+Compiler: gcc version 11.2.0 (Ubuntu 11.2.0-18ubuntu1)
+This program comes with NO WARRANTY, to the extent permitted by law.
+You may redistribute it under the terms of the GNU General Public License;
+see the file named COPYING for details.
+Written by the VideoLAN team; see the AUTHORS file.
+> ```
+
+```bash
+rm video.bin
+ln -s video_starwars.bin video.bin 
+```
 Pour tester avec tsock en mode vidéo avec notre protocole mictcp, avec la commande suivante :
 Pour démarrer le puits (serveur) :
 ```bash
@@ -80,7 +101,7 @@ Pour démarrer le puits (serveur) :
 
 Pour envoyer lancer la vidéo (client):
 ```bash
-./tsock_video -s -t mictcp 127.0.0.1 9000
+./tsock_video -s -t mictcp 9000
 ```	
 
 ## 🧱 Architecture

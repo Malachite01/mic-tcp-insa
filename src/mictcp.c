@@ -48,8 +48,6 @@ int verif_socket(int socket) {
 int verif_address(mic_tcp_sock_addr addr) {
    // Vérifie que le port est valide (> 1024)
    if (addr.port <= 1024) return -1;
-   printf("port %d\n", addr.port);
-   printf("addr %s\n", addr.ip_addr.addr);
 
    if(strstr(addr.ip_addr.addr, "localhost")) return 0; // Si l'adresse est "localhost", on considère que c'est valide
 
@@ -138,15 +136,12 @@ int mic_tcp_accept(int socket, mic_tcp_sock_addr* addr) {
  */
 int mic_tcp_connect(int socket, mic_tcp_sock_addr addr) {
    print_func_name(__FUNCTION__);
-   printf("socket_verif %d\n", verif_socket(socket));
-   printf("addr_verif %d\n", verif_address(addr));
    // Vérifie si le socket est valide et si l'adresse est valide
    if (verif_socket(socket) == 0 && verif_address(addr) == 0) {
       socket_list[socket].remote_addr = addr; /* On attribue l'adresse distante au socket (port aussi) */
       socket_list[socket].state = ESTABLISHED; /* On change l'état du socket */
       return 0;
    }
-   printf("salut\n");
    return -1;
 }
 
