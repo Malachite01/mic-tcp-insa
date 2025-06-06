@@ -1,3 +1,25 @@
+## 📑 Sommaire
+
+- [BE-RESEAU-MIC-TCPV2](#be-reseau-mic-tcpv2)
+  - [📌 Objectifs](#-objectifs)
+  - [🚧 Versions Implémentées](#-versions-implémentées)
+    - [✅ Version 1 : MICTCP-v1](#-version-1--mictcp-v1)
+    - [✅ Version 2 : MICTCP-v2](#-version-2--mictcp-v2)
+    - [✅ Version 3 : MICTCP-v3 (WIP 🚧)](#-version-3--mictcp-v3-wip-)
+  - [🛠 Compilation](#-compilation)
+  - [📚 Exemple d'utilisation](#-exemple-dutilisation)
+    - [Texte](#texte)
+    - [Vidéo](#vidéo)
+  - [🧱 Architecture](#-architecture)
+    - [Initialisation et gestion des sockets](#initialisation-et-gestion-des-sockets)
+    - [Transmission de données](#transmission-de-données)
+    - [Réception des PDU](#réception-des-pdu)
+  - [🔍 Validation et sécurité](#-validation-et-sécurité)
+  - [🧪 Simulateur réseau](#-simulateur-réseau)
+  - [📁 Dépendances](#-dépendances)
+  - [👨‍💻 Auteurs](#-auteurs)
+
+
 # BE-RESEAU-MIC-TCPV2
 
 MIC-TCP est une implémentation simplifiée du protocole TCP écrite en C, et qui prend en compte un taux de perte. Ce projet a pour but de simuler les mécanismes de base de TCP (numéros de séquence, acquittements, gestion des connexions, etc.).
