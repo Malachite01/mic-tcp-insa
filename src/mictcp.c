@@ -3,10 +3,24 @@
 
 #define MAX_SOCKETS 1024 // Nombre maximum de sockets MIC-TCP
 #define MAX_TIMEOUT 100 // Timeout pour la réception d'un ACK en µs
+#define WINDOW_SIZE 10 // Taille de la fenêtre glissante
+
+// Structure pour la fenêtre glissante pour la gestion des pertes
+typedef struct {
+    int sent_count;      // Nombre de PDU envoyés
+    int ack_count;       // Nombre d'ACK reçus
+    int current_index;   // Index courant dans la fenêtre
+    int window_full;     // Indique si la fenêtre est remplie
+    time_t last_eval;    // Dernier moment d'évaluation
+} sliding_window_t;
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
 int last_used_socket = 0; // Dernier socket utilisé
 int next_sequence[MAX_SOCKETS] = {0}; // Numéro de séquence du prochain PDU à émettre
+
+//! Taux de perte
+int acceptable_loss_rate =  0; // Taux de perte par défaut (0%)
+sliding_window_t sliding_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
 
 /*
  * Fonction d'affichage du nom de la fonction
@@ -34,6 +48,10 @@ int verif_socket(int socket) {
 int verif_address(mic_tcp_sock_addr addr) {
    // Vérifie que le port est valide (> 1024)
    if (addr.port <= 1024) return -1;
+   printf("port %d\n", addr.port);
+   printf("addr %s\n", addr.ip_addr.addr);
+
+   if(strstr(addr.ip_addr.addr, "localhost")) return 0; // Si l'adresse est "localhost", on considère que c'est valide
 
    // Vérifie que la taille de l'adresse IP est non nulle
    if (addr.ip_addr.addr_size == 0 || addr.ip_addr.addr == NULL) return -1;
@@ -73,7 +91,7 @@ int mic_tcp_socket(start_mode sm){
    int result = -1;
    print_func_name(__FUNCTION__);
    result = initialize_components(sm); /* Appel obligatoire */
-   set_loss_rate(0); /* On initialise le taux de perte à 0% */
+   set_loss_rate(acceptable_loss_rate); /* On initialise le taux de perte, c'est la fonction IP_send() qui gère */
    
    // Verifie si la liste de sockets est pleine
    if (last_used_socket > MAX_SOCKETS) return -1;
@@ -95,7 +113,7 @@ int mic_tcp_bind(int socket, mic_tcp_sock_addr addr) {
    print_func_name(__FUNCTION__);
    
    //Vérifie si le socket est valide et si l'adresse est valide
-   if (verif_socket(socket) == 0 && verif_address(addr) == 0) {
+   if (verif_socket(socket) == 0) {
       // Attribue addr au socket
       socket_list[socket].local_addr = addr; /* On attribue l'adresse au socket */
       printf("[MIC-TCP] Socket %d lié à l'adresse %s:%d\n", socket, addr.ip_addr.addr, addr.port);
@@ -120,13 +138,15 @@ int mic_tcp_accept(int socket, mic_tcp_sock_addr* addr) {
  */
 int mic_tcp_connect(int socket, mic_tcp_sock_addr addr) {
    print_func_name(__FUNCTION__);
-   
+   printf("socket_verif %d\n", verif_socket(socket));
+   printf("addr_verif %d\n", verif_address(addr));
    // Vérifie si le socket est valide et si l'adresse est valide
    if (verif_socket(socket) == 0 && verif_address(addr) == 0) {
       socket_list[socket].remote_addr = addr; /* On attribue l'adresse distante au socket (port aussi) */
       socket_list[socket].state = ESTABLISHED; /* On change l'état du socket */
       return 0;
    }
+   printf("salut\n");
    return -1;
 }
 
