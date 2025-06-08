@@ -4,23 +4,24 @@
 #define MAX_SOCKETS 1024 // Nombre maximum de sockets MIC-TCP
 #define MAX_TIMEOUT 100 // Timeout pour la réception d'un ACK en µs
 #define WINDOW_SIZE 10 // Taille de la fenêtre glissante
+#define DEFAULT_ACCEPTABLE_LOSS 50 // Taux de perte acceptable en % (modifiable)
 
+//! Taux de perte
 // Structure pour la fenêtre glissante pour la gestion des pertes
 typedef struct {
-    int sent_count;      // Nombre de PDU envoyés
-    int ack_count;       // Nombre d'ACK reçus
-    int current_index;   // Index courant dans la fenêtre
-    int window_full;     // Indique si la fenêtre est remplie
-    time_t last_eval;    // Dernier moment d'évaluation
+   int sent_packets[WINDOW_SIZE];  // Tableau des paquets envoyés
+   int ack_received[WINDOW_SIZE];  // Tableau des ACK reçus
+   int window_index;               // Index courant
+   int packets_in_window;          // Nombre de paquets dans la fenêtre
 } sliding_window_t;
+
+sliding_window_t loss_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
+int acceptable_loss_rate =  DEFAULT_ACCEPTABLE_LOSS; // Taux de perte par défaut (20%)
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
 int last_used_socket = 0; // Dernier socket utilisé
 int next_sequence[MAX_SOCKETS] = {0}; // Numéro de séquence du prochain PDU à émettre
 
-//! Taux de perte
-int acceptable_loss_rate =  0; // Taux de perte par défaut (0%)
-sliding_window_t sliding_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
 
 /*
  * Fonction d'affichage du nom de la fonction
@@ -28,6 +29,124 @@ sliding_window_t sliding_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque 
 void print_func_name(const char* func_name) {
    printf("[MIC-TCP] Appel de la fonction: %s\n", func_name);
 }
+
+
+//!     ___________________________
+//!    |_PARTIE_FENETRE_GLISSANTE_|
+
+/*
+ * Initialise la fenêtre glissante pour un socket
+ */
+void init_a_sliding_window(int socket) {
+   print_func_name(__FUNCTION__);
+   // A l'adresse du descripteur socket, on initialise la fenêtre glissante
+   sliding_window_t *window = &loss_window[socket];
+   
+   // Initialiser tous les éléments à 0
+   for (int i = 0; i < WINDOW_SIZE; i++) {
+      window->sent_packets[i] = 0;
+      window->ack_received[i] = 0;
+   }
+   
+   window->window_index = 0;
+   window->packets_in_window = 0;
+   
+   printf("[MIC-TCP] Fenêtre glissante initialisée pour socket %d\n", socket);
+}
+
+/*
+ * Ajoute un paquet envoyé dans la fenêtre glissante
+ */
+void add_sent_packet(int socket) {
+   // A l'adresse de socket, on ajoute un paquet envoyé dans la fenêtre glissante
+   sliding_window_t *window = &loss_window[socket];
+   
+   // Ajouter le paquet à la position courante
+   window->sent_packets[window->window_index] = 1;
+   window->ack_received[window->window_index] = 0; // Pas encore d'ACK
+   
+   // Avancer l'index (circulaire car modulo WINDOW_SIZE)
+   window->window_index = (window->window_index + 1) % WINDOW_SIZE;
+   
+   // Incrémenter le nombre de paquets si la fenêtre n'est pas pleine
+   if (window->packets_in_window < WINDOW_SIZE) window->packets_in_window++;
+   
+   printf("[MIC-TCP] Socket %d: Paquet ajouté à la fenêtre (total: %d)\n", socket, window->packets_in_window);
+}
+
+/*
+ * Marque un ACK comme reçu dans la fenêtre glissante
+ */
+void mark_ack_received(int socket) {
+   // A l'adresse de socket, on marque un ACK comme reçu dans la fenêtre glissante
+   sliding_window_t *window = &loss_window[socket];
+   
+   // Marquer l'ACK pour le dernier paquet envoyé
+   int last_sent_index = (window->window_index - 1 + WINDOW_SIZE) % WINDOW_SIZE;
+   window->ack_received[last_sent_index] = 1;
+   
+   printf("[MIC-TCP] Socket %d: ACK marqué comme reçu\n", socket);
+}
+
+/*
+ * Calcule le taux de perte dans la fenêtre glissante actuelle
+ * Retourne le pourcentage de perte (0-100)
+ */
+int calculate_current_loss_rate(int socket) {
+   sliding_window_t *window = &loss_window[socket];
+   
+   if (window->packets_in_window == 0) return 0; // Pas de paquets envoyés
+   
+   int sent_count = 0, ack_count = 0;
+   
+   // Compter les paquets envoyés et les ACK reçus
+   for (int i = 0; i < window->packets_in_window; i++) {
+      if (window->sent_packets[i] == 1) {
+         sent_count++;
+         if (window->ack_received[i] == 1) {
+            ack_count++;
+         }
+      }
+   }
+   
+   if (sent_count == 0) return 0; // Pas de paquets envoyés, pas de perte
+   
+   int loss_rate_percent = ((sent_count - ack_count) * 100) / sent_count;
+   
+   printf("[MIC-TCP] Socket %d: Taux de perte calculé: %d%% (%d perdus sur %d)\n", socket, loss_rate_percent, sent_count - ack_count, sent_count);
+   
+   return loss_rate_percent;
+}
+
+/*
+ * Évalue si on peut accepter les pertes actuelles
+ * Retourne 0 si on peut "mentir" sur le numéro de séquence, -1 sinon
+ */
+int can_accept_loss(int socket) { 
+   int current_loss_rate = calculate_current_loss_rate(socket);
+   
+   if (current_loss_rate <= acceptable_loss_rate) return 0; // On peut accepter la perte
+   return -1; // Doit continuer à attendre l'ACK
+}
+
+void debug_window(int socket) {
+   sliding_window_t *window = &loss_window[socket];
+   printf("[MIC-TCP] Fenêtre glissante pour le socket %d:\n", socket);
+   printf("  Index courant: %d\n", window->window_index);
+   printf("  Paquets dans la fenêtre: %d\n", window->packets_in_window);
+   printf("  Paquets envoyés: ");
+   for (int i = 0; i < WINDOW_SIZE; i++) {
+      printf("%d ", window->sent_packets[i]);
+   }
+   printf("\n  ACK reçus: ");
+   for (int i = 0; i < WINDOW_SIZE; i++) {
+      printf("%d ", window->ack_received[i]);
+   }
+   printf("\n");
+}
+
+//!     _______________________
+//!    |_PARTIE_VERIFICATIONS_|
 
 /*
  * Fonction de vérification de la validité d'un socket
@@ -81,6 +200,9 @@ int verif_address(mic_tcp_sock_addr addr) {
    return 0;
 }
 
+//!     _______________________________
+//!    |_PARTIE_FONCTIONS_PRINCIPALES_|
+
 /*
  * Permet de créer un socket entre l’application et MIC-TCP
  * Retourne le descripteur du socket ou bien -1 en cas d'erreur
@@ -96,6 +218,10 @@ int mic_tcp_socket(start_mode sm){
    
    socket_list[last_used_socket].fd = last_used_socket;
    socket_list[last_used_socket].state = CLOSED;
+   
+   // Initialiser la fenêtre glissante pour ce socket
+   init_a_sliding_window(last_used_socket);
+   
    int socket = last_used_socket; // On récupère le descripteur du socket
    last_used_socket++;
 
@@ -184,18 +310,22 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
    pdu.payload.size = mesg_size; // On met la taille du message dans le payload
    pdu_ack.payload.size = 0; // Pas de données dans le PDU ACK
 
-   int ack_received = 0;
-   while (ack_received == 0) { // On boucle jusqu'à ce qu'on reçoive un ACK valide
+   int ack_received = 0; // Variable pour savoir si on a reçu un ACK valide
+
+   //! On boucle jusqu'à ce qu'on reçoive un ACK valide
+   while (ack_received == 0) { 
       //? Envoi du PDU sur la couche IP
       printf("[MIC-TCP] Envoi du PDU avec numéro de séquence : %d\n", pdu.header.seq_num);
       effective_ip_send = IP_send(pdu, socket_list[mic_sock].remote_addr.ip_addr); // On envoie le PDU sur la couche IP
-      if (effective_ip_send == -1) return -1; // Erreur lors de l'envoi du PDU
+      // Erreur lors de l'envoi du PDU
+      if (effective_ip_send == -1) return -1;
       printf("[MIC-TCP] Envoi réussi pour le PDU avec numéro de séquence : %d\n", pdu.header.seq_num);
 
+      //? Ajouter le paquet à la fenêtre glissante
+      add_sent_packet(mic_sock);
+
       //? Attente d'un ACK avec timeout dans le cas où le PDU est perdu
-      printf("[MIC-TCP] numéro de séquence (avant recv) : %d\n", pdu_ack.header.seq_num);
       int recv_status = IP_recv(&pdu_ack, &local_addr_ack, &remote_addr_ack, MAX_TIMEOUT); // On attend le PDU ACK sur la couche IP
-      printf("[MIC-TCP] numéro de séquence ACK recu : %d\n", pdu_ack.header.seq_num);
 
       //? On vérifie si le PDU_ACK reçu à un numéro de séquence valide
       // num séquence PDU_ACK = num séquence du prochain PDU à émettre + 1 (car on attend un ACK pour le PDU envoyé)
@@ -204,9 +334,30 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
          && pdu_ack.header.seq_num == next_sequence[mic_sock]+1)
       {
          ack_received = 1; // On a reçu un ACK valide donc on sort de la boucle
-         printf("[MIC-TCP] ACK reçu pour le PDU avec numéro de séquence : %d\n", pdu_ack.header.seq_num);
+         mark_ack_received(mic_sock); // On marque l'ACK comme reçu dans la fenêtre glissante
+         printf("[MIC-TCP] ACK reçu pour le PDU avec numéro de séquence : %d\n", pdu_ack.header.seq_num-1);
          next_sequence[mic_sock]++; // On incrémente le numéro de séquence du prochain PDU à émettre
       }
+
+      //? Pas de ACK reçu ou ACK invalide
+      if (recv_status == -1 || !ack_received) {
+         //? Vérifier le taux de perte
+         if (can_accept_loss(mic_sock) == -1) { 
+            // Si le taux de perte est trop élevé on continue à attendre un ACK valide
+            printf("[MIC-TCP] Taux de perte inacceptable, attente d'un ACK valide\n");
+            continue; // On continue à attendre un ACK valide
+         } else {
+            // Taux de perte acceptable, on "ment" sur le numéro de séquence
+            printf("[MIC-TCP] Perte PDU acceptable, passage au PDU suivant (seq: %d -> %d)\n", 
+                  next_sequence[mic_sock], next_sequence[mic_sock] + 1);
+            ack_received = 1; // On considère qu'on a reçu un ACK pour le PDU suivant
+            next_sequence[mic_sock]++;
+            effective_ip_send = mesg_size; // Simuler un envoi réussi
+            // On n'appelle pas mark_ack_received ici car on n'a pas reçu d'ACK valide
+            // Donc pour les stats de la fenêtre glissante, on ne marque pas l'ACK comme reçu
+         }
+      }
+      debug_window(mic_sock);
    }
 
    return effective_ip_send; // Retourne la taille des données envoyées (return -1 en cas d'erreur)    
@@ -246,6 +397,7 @@ int mic_tcp_close (int socket) {
       socket_list[i] = socket_list[i + 1];
       socket_list[i].fd = i; // Met à jour le descripteur de fichier
       next_sequence[i] = next_sequence[i + 1]; // Met à jour le numéro de séquence
+      loss_window[i] = loss_window[i + 1];
    }
    last_used_socket--;
 

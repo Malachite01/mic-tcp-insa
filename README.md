@@ -57,6 +57,8 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 
 - ✔️ Ajout d’un taux de perte configurable pour simuler des erreurs réseau (utilisation de la fonction `set_loss_rate()`)
 - ✔️ Gestion des retransmissions en cas de perte simulée
+- ✔️ Utilise des tableaux pour tracker les paquets envoyés et les ACK reçus
+- ✔️ Calcul du taux de perte basé sur une fenêtre glissante a taille définie
 - ✔️ Logique de fiabilité partielle dans mic_tcp_send : 
     - Envoi normal avec attente d'ACK, Si pas d'ACK: évaluation du taux de perte
     -> Si taux acceptable: "mentir" sur le numéro de séquence et continuer
