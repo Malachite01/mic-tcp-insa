@@ -5,7 +5,8 @@
   - [🚧 Versions Implémentées](#-versions-implémentées)
     - [✅ Version 1 : MICTCP-v1](#-version-1--mictcp-v1)
     - [✅ Version 2 : MICTCP-v2](#-version-2--mictcp-v2)
-    - [✅ Version 3 : MICTCP-v3 (WIP 🚧)](#-version-3--mictcp-v3-wip-)
+    - [✅ Version 3 : MICTCP-v3](#-version-3--mictcp-v3)
+    - [✅ Version 3 : MICTCP-v4 (WIP 🚧)](#-version-3--mictcp-v4-wip-)
   - [🛠 Compilation](#-compilation)
   - [📚 Exemple d'utilisation](#-exemple-dutilisation)
     - [Texte](#texte)
@@ -52,7 +53,7 @@ Fonctionnalité : Mécanisme de fiabilité totale avec Stop & Wait
 - ✔️ Table de réception utilisée pour la gestion des messages
 - ✔️ Fiabilité stricte : le socket réémet indéfiniment les paquets tant que l’ACK attendu n’est pas reçu, sans tolérer aucune perte.
 
-### ✅ Version 3 : MICTCP-v3 (WIP 🚧)
+### ✅ Version 3 : MICTCP-v3
 Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 
 - ✔️ Ajout d’un taux de perte configurable pour simuler des erreurs réseau (utilisation de la fonction `set_loss_rate()`)
@@ -75,6 +76,8 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 
 >Cela permet une resynchronisation naturelle des numéros de séquence.
 >En d’autres termes, le second échange "corrige" le désalignement du premier.
+
+### ✅ Version 3 : MICTCP-v4 (WIP 🚧)
 
 
 ## 🛠 Compilation
