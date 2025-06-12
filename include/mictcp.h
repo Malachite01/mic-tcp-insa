@@ -14,6 +14,11 @@
 #include <pthread.h>
 #include <sys/time.h>
 
+#define MAX_SOCKETS 1024 // Nombre maximum de sockets MIC-TCP
+#define MAX_TIMEOUT 100 // Timeout pour la réception d'un ACK en µs
+#define WINDOW_SIZE 10 // Taille de la fenêtre glissante
+#define DEFAULT_ACCEPTABLE_LOSS 50 // Taux de perte acceptable en % (modifiable)
+
 
 /*
  * Etats du protocole (les noms des états sont donnés à titre indicatif
@@ -98,6 +103,16 @@ typedef struct app_buffer
     struct app_buffer* next;
     unsigned short id;
 } app_buffer;
+
+
+// Structure pour la fenêtre glissante pour la gestion des pertes
+typedef struct {
+   int sent_packets[WINDOW_SIZE];  // Tableau des paquets envoyés
+   int ack_received[WINDOW_SIZE];  // Tableau des ACK reçus
+   int window_index;               // Index courant
+   int packets_in_window;          // Nombre de paquets dans la fenêtre
+} sliding_window_t;
+
 
 
 /****************************

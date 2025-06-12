@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
         int sent_size = mic_tcp_send(sockfd, chaine, strlen(chaine)+1);
         printf("[TSOCK] Appel de mic_send avec un message de taille : %lu\n", strlen(chaine)+1);
         printf("[TSOCK] Appel de mic_send valeur de retour : %d\n", sent_size);
+        printf("D'autres message ?\n");
     }
 
     mic_tcp_close(sockfd);
