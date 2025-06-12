@@ -342,8 +342,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
             continue; // On continue à attendre un ACK valide
          } else {
             // Taux de perte acceptable, on "ment" sur le numéro de séquence
-            printf("[MIC-TCP] Perte PDU acceptable\n", 
-                  next_sequence[mic_sock], next_sequence[mic_sock] + 1); 
+            printf("[MIC-TCP] Perte PDU acceptable\n"); 
             ack_received = 1; // On considère qu'on a reçu un ACK pour le PDU suivant
             effective_ip_send = mesg_size; // Simuler un envoi réussi
             // On n'appelle pas mark_ack_received ici car on n'a pas reçu d'ACK valide

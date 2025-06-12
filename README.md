@@ -6,7 +6,8 @@
     - [✅ Version 1 : MICTCP-v1](#-version-1--mictcp-v1)
     - [✅ Version 2 : MICTCP-v2](#-version-2--mictcp-v2)
     - [✅ Version 3 : MICTCP-v3](#-version-3--mictcp-v3)
-    - [✅ Version 3 : MICTCP-v4 (WIP 🚧)](#-version-3--mictcp-v4-wip-)
+    - [✅ Version 4 : MICTCP-v4](#-version-4--mictcp-v4)
+      - [✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)](#-version-41--mictcp-v41-wip-)
   - [🛠 Compilation](#-compilation)
   - [📚 Exemple d'utilisation](#-exemple-dutilisation)
     - [Texte](#texte)
@@ -67,17 +68,14 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 > [!NOTE]  
 > *Pourquoi n’incrémente-t-on pas le numéro de séquence en cas de perte acceptable ?*
 >Lorsqu’un ACK est perdu, cela peut provoquer une désynchronisation entre les numéros de séquence du client (source) et du serveur (puits).
-
 >En effet, si le puits reçoit correctement une donnée, il incrémente son numéro de séquence et renvoie un ACK. Mais si cet ACK est perdu, la source ne le reçoit pas et n’incrémente donc pas son propre numéro de séquence.
-
 >Si le taux de perte reste dans une limite acceptable, aucune retransmission n’est déclenchée. La source croit alors que la donnée n’a pas été reçue, alors qu’elle l’a bien été.
-
 >Ce désalignement n’est pas critique. Lors d’un envoi suivant où tout se passe correctement, la source reçoit un ACK et incrémente son numéro de séquence, tandis que le puits, constatant un numéro déjà vu, ignore la donnée et renvoie simplement un ACK.
-
 >Cela permet une resynchronisation naturelle des numéros de séquence.
 >En d’autres termes, le second échange "corrige" le désalignement du premier.
 
-### ✅ Version 3 : MICTCP-v4 (WIP 🚧)
+### ✅ Version 4 : MICTCP-v4
+#### ✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)
 
 
 ## 🛠 Compilation
@@ -114,11 +112,17 @@ puis en mode interactif, vous pouvez envoyer des messages.
 ### Vidéo
 > [!WARNING]  
 > Dans le cas ou vous obtenez l'erreur `src/apps/gateway.c:344 [read_rtp_packet()] -> Buffer is too small to store the packet`, il s'agit d'un problème de lien symbolique, que vous pouvez corriger en recréant les liens de la vidéo que vous voulez visioner :
+>
+```bash
+rm video.bin
+ln -s video_starwars.bin video.bin 
+```
 
 > [!NOTE]  
 > Pour réellement visionner la vidéo, vlc est nécessaire.
-> ```bash
-> vlc --version
+> 
+```bash
+vlc --version
 VLC media player 3.0.16 Vetinari (revision 3.0.13-8-g41878ff4f2)
 VLC version 3.0.16 Vetinari (3.0.13-8-g41878ff4f2)
 Compiled by buildd on lcy02-amd64-108.buildd (Mar 13 2022 08:00:10)
@@ -127,12 +131,9 @@ This program comes with NO WARRANTY, to the extent permitted by law.
 You may redistribute it under the terms of the GNU General Public License;
 see the file named COPYING for details.
 Written by the VideoLAN team; see the AUTHORS file.
-> ```
-
-```bash
-rm video.bin
-ln -s video_starwars.bin video.bin 
 ```
+
+
 Pour tester avec tsock en mode vidéo avec notre protocole mictcp, avec la commande suivante :
 Pour démarrer le puits (serveur) :
 ```bash
