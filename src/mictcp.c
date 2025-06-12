@@ -1,6 +1,7 @@
 #include <mictcp.h>
 #include <api/mictcp_core.h>
 
+//! Parametres globaux définis dans mictcp.h
 
 sliding_window_t loss_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
 int acceptable_loss_rate =  DEFAULT_ACCEPTABLE_LOSS; // Taux de perte par défaut (20%)
@@ -97,11 +98,10 @@ int calculate_current_loss_rate(int socket) {
    }
    
    if (sent_count == 0) return 0; // Pas de paquets envoyés, pas de perte
-   
+   // Calculer le taux de perte
    int loss_rate_percent = ((sent_count - ack_count) * 100) / sent_count;
    
    printf("[MIC-TCP] Socket %d: Taux de perte calculé: %d%% (%d perdus sur %d)\n", socket, loss_rate_percent, sent_count - ack_count, sent_count);
-   
    return loss_rate_percent;
 }
 
@@ -116,6 +116,9 @@ int can_accept_loss(int socket) {
    return -1; // Doit continuer à attendre l'ACK
 }
 
+/*
+ * Affiche le contenu de la fenêtre glissante pour le socket donné
+ */
 void debug_window(int socket) {
    sliding_window_t *window = &loss_window[socket];
    printf("[MIC-TCP] Fenêtre glissante pour le socket %d:\n", socket);
@@ -307,7 +310,6 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
       effective_ip_send = IP_send(pdu, socket_list[mic_sock].remote_addr.ip_addr); // On envoie le PDU sur la couche IP
       // Erreur lors de l'envoi du PDU
       if (effective_ip_send == -1) return -1;
-      printf("[MIC-TCP] Envoi réussi pour le PDU avec numéro de séquence : %d\n", pdu.header.seq_num);
 
       //? Ajouter le paquet à la fenêtre glissante
       if (premier_envoi) { // on l'ajoute qu'une seule fois
@@ -340,7 +342,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
             continue; // On continue à attendre un ACK valide
          } else {
             // Taux de perte acceptable, on "ment" sur le numéro de séquence
-            printf("[MIC-TCP] Perte PDU acceptable, passage au PDU suivant (seq: %d -> %d)\n", 
+            printf("[MIC-TCP] Perte PDU acceptable\n", 
                   next_sequence[mic_sock], next_sequence[mic_sock] + 1); 
             ack_received = 1; // On considère qu'on a reçu un ACK pour le PDU suivant
             effective_ip_send = mesg_size; // Simuler un envoi réussi
@@ -350,9 +352,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
       }
 
       debug_window(mic_sock);
-      printf("[MIC-TCP] numéro de séquence actuel pour le socket %d\n", next_sequence[mic_sock]);
-
-
+      printf("[MIC-TCP] Numéro de séquence actuel pour le socket %d\n", next_sequence[mic_sock]);
    }
 
    return effective_ip_send; // Retourne la taille des données envoyées (return -1 en cas d'erreur)    
@@ -423,14 +423,12 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
       return; //on ne fait rien si le PDU n'est pas pour nous
    }
 
-   printf("[MIC-TCP] PDU reçu pour le socket %d, numéro de séquence : %d\n", fd, next_sequence[fd]);
    //! Verifier le num de sequence du PDU
    if (pdu.header.seq_num == next_sequence[fd]) {
       // On met le PDU dans le buffer de réception du socket
       app_buffer_put(pdu.payload);
       next_sequence[fd]++; // On incrémente le numéro de séquence du prochain PDU à émettre
-   }  
-   printf("[MIC-TCP] PDU traité pour le socket %d, numéro de séquence : %d\n", fd, next_sequence[fd]);
+   }
    
    //! Envoyer un acquittement ACK
    mic_tcp_pdu pdu_ack;
@@ -444,15 +442,3 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
    pdu_ack.payload.size = 0; // Pas de données dans le PDU ACK 
    IP_send(pdu_ack, remote_addr); // On envoie le PDU ACK sur la couche IP
 }
-
-
-//! Alors j'ai régler un problème concernant la logique de la fenêtre glissante, on augmentait le n
-//! numéro de séquence même si on n'avait pas reçu d'ACK valide, ce qui pouvait causer des problèmes de synchronisation.
-//! avec les numéros de séquence côté puit.
-
-//! Or problème, si on augmente pas le numéro de séquence, et que le puit l'a bien reçu, et que uniquement le ack retour est perdu, 
-//! alors il y aura quand même un problème de synchronisation
-
-//! blablabla explication de pk c'est Ok le second type de perte
-
-

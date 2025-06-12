@@ -57,12 +57,25 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 
 - ✔️ Ajout d’un taux de perte configurable pour simuler des erreurs réseau (utilisation de la fonction `set_loss_rate()`)
 - ✔️ Gestion des retransmissions en cas de perte simulée
-- ✔️ Utilise des tableaux pour tracker les paquets envoyés et les ACK reçus
+- ✔️ Utilise des tableaux pour tracker les paquets envoyés et les ACK reçus (fenêtre glissante)
 - ✔️ Calcul du taux de perte basé sur une fenêtre glissante a taille définie
 - ✔️ Logique de fiabilité partielle dans mic_tcp_send : 
     - Envoi normal avec attente d'ACK, Si pas d'ACK: évaluation du taux de perte
-    -> Si taux acceptable: "mentir" sur le numéro de séquence et continuer
+    -> Si taux acceptable: continuer, et ne pas incrémenter le numéro de séquence
     -> Si taux trop élevé: continuer les retransmissions
+> [!NOTE]  
+> *Pourquoi n’incrémente-t-on pas le numéro de séquence en cas de perte acceptable ?*
+>Lorsqu’un ACK est perdu, cela peut provoquer une désynchronisation entre les numéros de séquence du client (source) et du serveur (puits).
+
+>En effet, si le puits reçoit correctement une donnée, il incrémente son numéro de séquence et renvoie un ACK. Mais si cet ACK est perdu, la source ne le reçoit pas et n’incrémente donc pas son propre numéro de séquence.
+
+>Si le taux de perte reste dans une limite acceptable, aucune retransmission n’est déclenchée. La source croit alors que la donnée n’a pas été reçue, alors qu’elle l’a bien été.
+
+>Ce désalignement n’est pas critique. Lors d’un envoi suivant où tout se passe correctement, la source reçoit un ACK et incrémente son numéro de séquence, tandis que le puits, constatant un numéro déjà vu, ignore la donnée et renvoie simplement un ACK.
+
+>Cela permet une resynchronisation naturelle des numéros de séquence.
+>En d’autres termes, le second échange "corrige" le désalignement du premier.
+
 
 ## 🛠 Compilation
 
