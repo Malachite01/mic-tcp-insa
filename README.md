@@ -67,15 +67,20 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
     -> Si taux trop élevé: continuer les retransmissions
 > [!NOTE]  
 > *Pourquoi n’incrémente-t-on pas le numéro de séquence en cas de perte acceptable ?*
->Lorsqu’un ACK est perdu, cela peut provoquer une désynchronisation entre les numéros de séquence du client (source) et du serveur (puits).
->En effet, si le puits reçoit correctement une donnée, il incrémente son numéro de séquence et renvoie un ACK. Mais si cet ACK est perdu, la source ne le reçoit pas et n’incrémente donc pas son propre numéro de séquence.
->Si le taux de perte reste dans une limite acceptable, aucune retransmission n’est déclenchée. La source croit alors que la donnée n’a pas été reçue, alors qu’elle l’a bien été.
->Ce désalignement n’est pas critique. Lors d’un envoi suivant où tout se passe correctement, la source reçoit un ACK et incrémente son numéro de séquence, tandis que le puits, constatant un numéro déjà vu, ignore la donnée et renvoie simplement un ACK.
->Cela permet une resynchronisation naturelle des numéros de séquence.
->En d’autres termes, le second échange "corrige" le désalignement du premier.
+> Lorsqu’un ACK est perdu, cela peut provoquer une désynchronisation entre les numéros de séquence du client (source) et du serveur (puits).
+> 
+> En effet, si le puits reçoit correctement une donnée, il incrémente son numéro de séquence et renvoie un ACK. Mais si cet ACK est perdu, la source ne le reçoit pas et n’incrémente donc pas son propre numéro de séquence.
+> 
+> Si le taux de perte reste dans une limite acceptable, aucune retransmission n’est déclenchée. La source croit alors que la donnée n’a pas été reçue, alors qu’elle l’a bien été.
+> 
+> Ce désalignement n’est pas critique. Lors d’un envoi suivant où tout se passe correctement, la source reçoit un ACK et incrémente son numéro de séquence, tandis que le puits, constatant un numéro déjà vu, ignore la donnée et renvoie simplement un ACK.
+> 
+> Cela permet une resynchronisation naturelle des numéros de séquence.
+> En d’autres termes, le second échange "corrige" le désalignement du premier.
 
 ### ✅ Version 4 : MICTCP-v4
 #### ✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)
+Fonctionnalité : Phase de connexion et négociation du taux de perte
 
 
 ## 🛠 Compilation
