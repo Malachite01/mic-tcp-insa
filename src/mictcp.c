@@ -4,7 +4,8 @@
 //! Parametres globaux définis dans mictcp.h
 sliding_window_t loss_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
 int real_loss_rate = REAL_LOSS; // Taux de perte réel utilisé pour simuler les pertes
-int acceptable_loss_rate =  DEFAULT_ACCEPTABLE_LOSS; // Taux de perte par défaut (20%)
+// Taux de perte acceptables. Par défaut (20%)
+int acceptable_loss_rate =  DEFAULT_ACCEPTABLE_LOSS; // Utilisée pour négocier le taux de perte acceptable dans le SYN de connexion 
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
 int last_used_socket = 0; // Dernier socket utilisé
@@ -284,6 +285,8 @@ int mic_tcp_connect(int socket, mic_tcp_sock_addr addr) {
       pdu_syn.header.ack = 0; 
       pdu_syn.header.fin = 0;
       pdu_syn.payload.size = 0;
+      //?  Le client transmet le taux acceptable de perte dans un champ innexistant du PDU
+      pdu_syn.header.ack_num = acceptable_loss_rate;
 
       printf("[MIC-TCP] Envoi du SYN pour établir la connexion sur le socket %d\n", socket);
       
@@ -472,6 +475,10 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
    //? Si on recoit un SYN
    if (socket_list[fd].state != ESTABLISHED && pdu.header.syn == 1 && pdu.header.ack == 0) {
       printf("[MIC-TCP] SYN reçu, envoi du SYN-ACK\n");
+      //? Mise à jour du taux de perte acceptable depuis le client
+      acceptable_loss_rate = pdu.header.ack_num;
+      printf("[MIC-TCP] Taux de perte accepté par le client : %d%%\n", acceptable_loss_rate);
+      
       mic_tcp_pdu pdu_recv;
       pdu_recv.payload.data = 0; // On met le message dans le payload
       pdu_recv.payload.size = 0; // On met la taille du message dans le payload
