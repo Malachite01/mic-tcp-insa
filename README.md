@@ -18,8 +18,9 @@
     - [Transmission de données](#transmission-de-données)
     - [Réception des PDU](#réception-des-pdu)
     - [Validation et sécurité](#validation-et-sécurité)
-    - [Simulateur réseau](#simulateur-réseau)
+    - [IP simulée](#ip-simulée)
   - [📁 Dépendances](#-dépendances)
+  - [⚠️ Axes d'amélioration](#️-axes-damélioration)
   - [👨‍💻 Auteurs](#-auteurs)
 
 
@@ -201,6 +202,10 @@ Le taux de perte peut être configuré avec `set_loss_rate()` pour tester la fia
 - `mictcp.h` : Interface de programmation principale
 - `api/mictcp_core.h` : Contient les appels à la couche IP simulée
 - 
+
+## ⚠️ Axes d'amélioration
+- Gestion plus réaliste des ACKs :
+Actuellement, l’implémentation considère l’ACK comme correspondant systématiquement au dernier paquet envoyé, ce qui simplifie la logique mais ne reflète pas fidèlement le comportement de TCP. En effet, un ACK peut arriver en retard et faire référence à un paquet plus ancien. Il serait donc préférable d’associer explicitement chaque ACK à un numéro de séquence et de mettre à jour l’entrée correspondante dans la fenêtre d’envoi, afin d’améliorer la robustesse et la précision du mécanisme de glissement.
 
 ## 👨‍💻 Auteurs
 Projet réalisé dans le cadre du module [BE Réseaux] a l'INSA Toulouse.

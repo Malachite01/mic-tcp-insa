@@ -490,6 +490,11 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
             printf("[MIC-TCP] ACK reçu pour le SYN-ACK\n");
             pthread_mutex_lock(&socket_list[fd].mutex);
             socket_list[fd].state = ESTABLISHED; // On change l'état du socket
+            
+            //TODO ????
+            //socket_list[fd].remote_addr.ip_addr = remote_addr;
+            // socket_list[fd].remote_addr.port = pdu.header.source_port;
+            
             pthread_cond_signal(&socket_list[fd].cond);  // Réveille le thread en attente
             pthread_mutex_unlock(&socket_list[fd].mutex);
             received = 1; // On a reçu l'ACK
