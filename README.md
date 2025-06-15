@@ -4,7 +4,7 @@
   - [📌 Objectifs](#-objectifs)
   - [🚧 Versions Implémentées](#-versions-implémentées)
     - [✅ Version 1 : MICTCP-v1](#-version-1--mictcp-v1)
-    - [✅ Version 2 : MICTCP-v2 (video fixed in V3)](#-version-2--mictcp-v2-video-fixed-in-v3)
+    - [✅ Version 2 : MICTCP-v2](#-version-2--mictcp-v2)
     - [✅ Version 3 : MICTCP-v3](#-version-3--mictcp-v3)
     - [✅ Version 4 : MICTCP-v4](#-version-4--mictcp-v4)
       - [✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)](#-version-41--mictcp-v41-wip-)
@@ -45,7 +45,7 @@ Fonctionnalité : Transfert de données sans fiabilité
 - ✔️ Aucune retransmission en cas de perte
 - ✔️ Pas de synchronisation application/transport
 
-### ✅ Version 2 : MICTCP-v2 (video fixed in V3)
+### ✅ Version 2 : MICTCP-v2
 Fonctionnalité : Mécanisme de fiabilité totale avec Stop & Wait
 
 - ✔️ Chaque PDU est accusé réception (ACK) avant d’émettre le suivant
