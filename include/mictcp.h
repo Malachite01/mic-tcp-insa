@@ -63,6 +63,8 @@ typedef struct mic_tcp_sock
   protocol_state state; /* état du protocole */
   mic_tcp_sock_addr local_addr; /* adresse locale du socket */
   mic_tcp_sock_addr remote_addr; /* adresse distante du socket */
+  pthread_mutex_t mutex; /* mutex pour la synchronisation */
+  pthread_cond_t cond; /* condition pour la synchronisation */
 } mic_tcp_sock;
 
 /*

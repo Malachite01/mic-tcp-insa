@@ -8,6 +8,7 @@
     - [✅ Version 3 : MICTCP-v3](#-version-3--mictcp-v3)
     - [✅ Version 4 : MICTCP-v4](#-version-4--mictcp-v4)
       - [✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)](#-version-41--mictcp-v41-wip-)
+      - [❌ Version 4.2 : MICTCP-v4.2](#-version-42--mictcp-v42)
   - [🛠 Compilation](#-compilation)
   - [📚 Exemple d'utilisation](#-exemple-dutilisation)
     - [Texte](#texte)
@@ -16,8 +17,8 @@
     - [Initialisation et gestion des sockets](#initialisation-et-gestion-des-sockets)
     - [Transmission de données](#transmission-de-données)
     - [Réception des PDU](#réception-des-pdu)
-  - [🔍 Validation et sécurité](#-validation-et-sécurité)
-  - [🧪 Simulateur réseau](#-simulateur-réseau)
+    - [Validation et sécurité](#validation-et-sécurité)
+    - [Simulateur réseau](#simulateur-réseau)
   - [📁 Dépendances](#-dépendances)
   - [👨‍💻 Auteurs](#-auteurs)
 
@@ -30,7 +31,7 @@ MIC-TCP est une implémentation simplifiée du protocole TCP écrite en C, et qu
 ## 📌 Objectifs
 
 - Implémenter une pile TCP minimale au-dessus d’une couche IP simulée
-- Gérer la création de sockets, la liaison (`bind`), la connexion (`connect`)
+- Gérer la création de sockets, la connexion (`connect`)
 - Assurer l’envoi et la réception de données avec fiabilité (modèle Stop & Wait)
 - Gérer les acquittements (ACK) et les numéros de séquence
 - Simuler des pertes de paquets et prévoir un retransfert
@@ -82,6 +83,11 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 #### ✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)
 Fonctionnalité : Phase de connexion et négociation du taux de perte
 
+- ✔️ Ajout d’une phase de connexion handshake avec un échange de SYN SYN_ACK et ACK
+- ✔️ Négociation du taux de perte entre client et serveur (le handshake permet l'échange du taux de perte admissible)
+- ✔️ Attente passive du client pour l'acceptation des connexions (modification de la structure `mic_tcp_sock` avec des champs mutex et variables conditionnelles)
+
+#### ❌ Version 4.2 : MICTCP-v4.2
 
 ## 🛠 Compilation
 
@@ -159,8 +165,8 @@ Le projet est structuré autour de plusieurs fonctions principales :
 - `mic_tcp_socket()`: Crée un socket MIC-TCP
 - `mic_tcp_bind()`: Lie une adresse locale à un socket
 - `mic_tcp_connect()`: Établit une connexion à un hôte distant
-- `mic_tcp_accept()`: Accepte une connexion entrante (modèle simplifié)
-- `mic_tcp_close()`: Ferme un socket et libère les ressources
+- `mic_tcp_accept()`: Accepte une connexion entrante
+- `mic_tcp_close()`: Ferme un socket
 
 ### Transmission de données
 
@@ -169,10 +175,10 @@ Le projet est structuré autour de plusieurs fonctions principales :
 
 ### Réception des PDU
 
-- `process_received_PDU()`: Fonction appelée à la réception d’un PDU MIC-TCP. Elle traite le numéro de séquence, stocke les données, et envoie un ACK si nécessaire.
+- `process_received_PDU()`: Fonction appelée à la réception d’un PDU MIC-TCP. Elle traite le numéro de séquence, stocke les données, et envoie un ACK si nécessaire. Elle gère également la phase de connexion (SYN, SYN-ACK, ACK), et les retransmissions en cas de perte.
 
 
-## 🔍 Validation et sécurité
+### Validation et sécurité
 
 Deux fonctions vérifient la validité des entrées :
 
@@ -180,7 +186,7 @@ Deux fonctions vérifient la validité des entrées :
 - `verif_address()`: Vérifie qu’une adresse IP contient **4 segments entre 0 et 255** et que le **port > 1024**
 
 
-## 🧪 Simulateur réseau
+### IP simulée
 
 La communication IP simulée est assurée par des appels à :
 
@@ -194,8 +200,7 @@ Le taux de perte peut être configuré avec `set_loss_rate()` pour tester la fia
 
 - `mictcp.h` : Interface de programmation principale
 - `api/mictcp_core.h` : Contient les appels à la couche IP simulée
-- `lib-mictcp` : Composants internes simulés (buffers, IP, logiques réseau)
-
+- 
 
 ## 👨‍💻 Auteurs
 Projet réalisé dans le cadre du module [BE Réseaux] a l'INSA Toulouse.
