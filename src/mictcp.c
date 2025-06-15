@@ -292,19 +292,18 @@ int mic_tcp_connect(int socket, mic_tcp_sock_addr addr) {
       remote_addr_ack.addr_size = 16;
       pdu_ack.payload.size = 0; 
 
-      int recv_status = IP_recv(&pdu_ack, &local_addr_ack, &remote_addr_ack, MAX_TIMEOUT); // Attente d'un ACK
+      int recv_status = IP_recv(&pdu_ack, &local_addr_ack, &remote_addr_ack, 3*MAX_TIMEOUT); // Attente du SYN-ACK
 
       if (recv_status != -1 && pdu_ack.header.syn == 1 && pdu_ack.header.ack == 1) {
-         printf("[MIC-TCP] Connexion établie avec succès sur le socket %d\n", socket);
+         printf("SYN-ACK reçu pour le socket %d\n", socket);
          // On a reçu un SYN-ACK, on envoie un ACK pour finaliser la connexion
          pdu.header.ack = 1; 
          pdu.header.syn = 0; 
          IP_send(pdu, addr.ip_addr); // Envoi de l'ACK
-         
          socket_list[socket].state = ESTABLISHED; // On change l'état du socket
       }
-   
    }
+   printf("[MIC-TCP] Connexion établie avec succès sur le socket %d\n", socket);     
    return 0;
 }
 
@@ -353,14 +352,14 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
    while (ack_received == 0) { 
       //? Envoi du PDU sur la couche IP
       printf("[MIC-TCP] Envoi du PDU avec numéro de séquence : %d\n", pdu.header.seq_num);
-      
       effective_ip_send = IP_send(pdu, socket_list[mic_sock].remote_addr.ip_addr); // On envoie le PDU sur la couche IP
       // Erreur lors de l'envoi du PDU
+      printf("[MIC-TCP] post-Envoi du PDU sur la couche IP\n");
       if (effective_ip_send == -1) return -1;
 
       //? Ajouter le paquet à la fenêtre glissante
       if (premier_envoi) { // on l'ajoute qu'une seule fois
-         add_sent_packet(mic_sock);
+         add_sent_packet(mic_sock); 
          premier_envoi = 0; 
       }
       
@@ -454,6 +453,9 @@ int mic_tcp_close (int socket) {
 void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_ip_addr remote_addr) {
    print_func_name(__FUNCTION__);
 
+   if (verif_address(remote_addr)) return;
+   if (verif_address(local_addr)) return; 
+
    //? Vérifie si le PDU était destiné à un de nos sockets
    int fd = -1;
    for (int i = 0; i < MAX_SOCKETS && i < last_used_socket; i++) {
@@ -468,15 +470,7 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
       return; //on ne fait rien si le PDU n'est pas pour nous
    }
 
-   //! Verifier le num de sequence du PDU
-   if (pdu.header.seq_num == next_sequence[fd] && pdu.header.ack == 0 && pdu.header.syn == 0 && pdu.header.fin == 0) {
-      // On met le PDU dans le buffer de réception du socket
-      app_buffer_put(pdu.payload);
-      next_sequence[fd]++; // On incrémente le numéro de séquence du prochain PDU à émettre
-   }
-   
-
-   //! Envoyer un acquittement ACK
+   //! CREATION DU PDU à renvoyer, ACK, FIN ou autre (ACK par défault)
    mic_tcp_pdu pdu_ack;
    // On inverse les ports source et destination pour répondre
    pdu_ack.header.source_port = pdu.header.dest_port;
@@ -486,31 +480,59 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
    pdu_ack.header.syn = 0; 
    pdu_ack.payload.size = 0; // Pas de données dans le PDU ACK
 
+   //! Phase d'établissement de connexion
 
-   //! Pour la connexion
+   //? Si on recoit un SYN
+   if (socket_list[fd].state != ESTABLISHED && pdu.header.syn == 1 && pdu.header.ack == 0) {
+      printf("[MIC-TCP] SYN reçu, envoi du SYN-ACK\n");
+      mic_tcp_pdu pdu_recv;
+      mic_tcp_ip_addr local_addr_recv, remote_addr_recv;
+      local_addr_recv.addr = malloc(sizeof(char) * 16);
+      local_addr_recv.addr_size = 16; 
+      remote_addr_recv.addr = malloc(sizeof(char) * 16); 
+      remote_addr_recv.addr_size = 16;
 
+      pdu_ack.header.syn = 1; // pour le SYN-ACK
 
-   // Si on recoit un SYN
-   if (pdu.header.syn == 1 && pdu.header.ack == 0) {
-
-      pdu_ack.header.syn = 1; // On envoie un SYN-ACK
-
-
-      //! Cas message normal
-      if (pdu.header.ack == 0 && pdu.header.syn == 0) {
-         printf("[MIC-TCP] PDU reçu avec numéro de séquence : %d\n", pdu.header.seq_num);
-         IP_send(pdu_ack, remote_addr); 
+      int received = 0; 
+      while (!received) {
+         IP_send(pdu_ack, remote_addr); // Envoi du SYN-ACK
+         printf("[MIC-TCP] Envoi du SYN-ACK pour le socket %d\n", fd);
+         int result = IP_recv(&pdu_recv, &local_addr_recv, &remote_addr_recv, 3*MAX_TIMEOUT);
+         printf("debug result : %d\n", result);
+         // Si on recoit un ACK pour le SYN-ACK
+         if (result != -1 && pdu_recv.header.ack == 1 && pdu_recv.header.syn == 0) { 
+            printf("[MIC-TCP] ACK reçu pour le SYN-ACK\n");
+            socket_list[fd].state = ESTABLISHED; // On change l'état du socket
+            received = 1; // On a reçu l'ACK
+            printf("[MIC-TCP] Connexion établie pour le socket %d\n", fd);
+         } 
       }
-      //! Cas d'un SYN-ACK
-      else if (pdu.header.ack == 1 && pdu.header.syn == 1) {
-         printf("[MIC-TCP] SYN ACK reçu\n");
-         socket_list[fd].state = ESTABLISHED; 
-         IP_send(pdu_ack, remote_addr); // On envoie l'ACK
+   }
 
+   //! Phase de transfert des données
+   
+   if (socket_list[fd].state == ESTABLISHED) {
+      //? Verifier le num de sequence du PDU
+      if (pdu.header.seq_num == next_sequence[fd] && pdu.header.ack == 0 && pdu.header.syn == 0 && pdu.header.fin == 0) {
+         // On met le PDU dans le buffer de réception du socket
+         app_buffer_put(pdu.payload);
+         next_sequence[fd]++; // On incrémente le numéro de séquence du prochain PDU à émettre
       }
-      //! Cas d'un SYN
-      else  {
-         printf("[MIC-TCP] SYN reçu, envoi du SYN-ACK\n");
+
+      //? Envoi de l'ACK pour le PDU reçu
+      IP_send(pdu_ack, remote_addr); // Envoi de l'ACK
+      }
+   
+
+   //! Phase de fermeture de connexion
+
+   if (socket_list[fd].state == ESTABLISHED) {
+
+      //? Si on recoit un FIN
+      if (pdu.header.fin == 1 && pdu.header.ack == 0) {
+         printf("[MIC-TCP] FIN reçu, envoi du FIN-ACK\n");
+
          mic_tcp_pdu pdu_recv;
          mic_tcp_ip_addr local_addr_recv, remote_addr_recv;
          local_addr_recv.addr = malloc(sizeof(char) * 16);
@@ -518,22 +540,24 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
          remote_addr_recv.addr = malloc(sizeof(char) * 16); 
          remote_addr_recv.addr_size = 16;
 
-         pdu_ack.header.syn = 1; // On n'envoie pas d'ACK pour le SYN
-
+         pdu_ack.header.fin = 1; // pour le FIN-ACK
 
          int received = 0; 
          while (!received) {
-            IP_send(pdu_ack, remote_addr); 
-            int result = IP_recv(&pdu_recv, &local_addr_recv, &remote_addr_recv, MAX_TIMEOUT);
+            IP_send(pdu_ack, remote_addr); // Envoi du FIN-ACK
+            printf("[MIC-TCP] Envoi du FIN-ACK pour le socket %d\n", fd);
+            int result = IP_recv(&pdu_recv, &local_addr_recv, &remote_addr_recv, 3*MAX_TIMEOUT);
+            printf("debug result : %d\n", result);
 
-            // Si on recoit un ACK pour le SYN-ACK
+            // Si on reçoit un ACK pour le FIN-ACK
             if (result != -1 && pdu_recv.header.ack == 1 && pdu_recv.header.syn == 0) { 
-               socket_list[fd].state = ESTABLISHED; // On change l'état du socket
+               printf("[MIC-TCP] ACK reçu pour le FIN-ACK\n");
+               socket_list[fd].state = CLOSED; // On change l'état du socket
                received = 1; // On a reçu l'ACK
-               printf("[MIC-TCP] Connexion établie pour le socket %d\n", fd);
-
+               printf("[MIC-TCP] Connexion fermé pour le socket %d\n", fd);
             } 
          }
       }
    }
+   
 }
