@@ -3,7 +3,7 @@
 
 //! Parametres globaux définis dans mictcp.h
 sliding_window_t loss_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
-int loss_rate = REAL_LOSS; // Taux de perte réel utilisé pour simuler les pertes
+int real_loss_rate = REAL_LOSS; // Taux de perte réel utilisé pour simuler les pertes
 int acceptable_loss_rate =  DEFAULT_ACCEPTABLE_LOSS; // Taux de perte par défaut (20%)
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
@@ -200,7 +200,7 @@ int mic_tcp_socket(start_mode sm){
    int result = -1;
    print_func_name(__FUNCTION__);
    result = initialize_components(sm); /* Appel obligatoire */
-   set_loss_rate(acceptable_loss_rate); /* On initialise le taux de perte, c'est la fonction IP_send() qui gère */
+   set_loss_rate(real_loss_rate); /* On initialise le taux de perte, c'est la fonction IP_send() qui gère */
    
    // Verifie si la liste de sockets est pleine
    if (last_used_socket > MAX_SOCKETS) return -1;
@@ -410,6 +410,10 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
       debug_window(mic_sock);
       printf("[MIC-TCP] Numéro de séquence actuel pour le socket %d\n", next_sequence[mic_sock]);
    }
+
+   // Libération de la mémoire allouée
+   free(local_addr_ack.addr);
+   free(remote_addr_ack.addr);
    return effective_ip_send; // Retourne la taille des données envoyées (return -1 en cas d'erreur)    
 }
 
@@ -440,8 +444,6 @@ int mic_tcp_recv (int socket, char* mesg, int max_mesg_size) {
 void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_ip_addr remote_addr) {
    print_func_name(__FUNCTION__);
 
-   if (verif_socket(remote_addr) == -1 || verif_address(local_addr) == -1) return;
-
    //? Vérifie si le PDU était destiné à un de nos sockets
    int fd = -1;
    for (int i = 0; i < MAX_SOCKETS && i < last_used_socket; i++) {
@@ -471,12 +473,14 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
    if (socket_list[fd].state != ESTABLISHED && pdu.header.syn == 1 && pdu.header.ack == 0) {
       printf("[MIC-TCP] SYN reçu, envoi du SYN-ACK\n");
       mic_tcp_pdu pdu_recv;
+      pdu_recv.payload.data = 0; // On met le message dans le payload
+      pdu_recv.payload.size = 0; // On met la taille du message dans le payload
       mic_tcp_ip_addr local_addr_recv, remote_addr_recv;
       local_addr_recv.addr = malloc(sizeof(char) * 16);
       local_addr_recv.addr_size = 16; 
       remote_addr_recv.addr = malloc(sizeof(char) * 16); 
       remote_addr_recv.addr_size = 16;
-
+     
       pdu_ack.header.syn = 1; // pour le SYN-ACK
 
       int received = 0; 
@@ -490,11 +494,6 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
             printf("[MIC-TCP] ACK reçu pour le SYN-ACK\n");
             pthread_mutex_lock(&socket_list[fd].mutex);
             socket_list[fd].state = ESTABLISHED; // On change l'état du socket
-            
-            //TODO ????
-            //socket_list[fd].remote_addr.ip_addr = remote_addr;
-            // socket_list[fd].remote_addr.port = pdu.header.source_port;
-            
             pthread_cond_signal(&socket_list[fd].cond);  // Réveille le thread en attente
             pthread_mutex_unlock(&socket_list[fd].mutex);
             received = 1; // On a reçu l'ACK
