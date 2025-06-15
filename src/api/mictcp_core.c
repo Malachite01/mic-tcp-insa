@@ -101,23 +101,20 @@ int IP_send(mic_tcp_pdu pk, mic_tcp_ip_addr addr)
     int random = rand();
     int lr_tresh = (int) round(((float)loss_rate/100.0)*RAND_MAX);
     struct hostent * hp;
-
     if(initialized == -1) {
         result = -1;
 
     } else {
         mic_tcp_payload tmp = get_full_stream(pk);
         int sent_size = tmp.size;
-
         if(random > lr_tresh) {
-           hp = gethostbyname(addr.addr);
-           memcpy (&(remote_addr.sin_addr.s_addr), hp->h_addr, hp->h_length);
-           sent_size = sendto(sys_socket, tmp.data, tmp.size, 0, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr));
-           printf("[MICTCP-CORE] Envoi d'un paquet IP de taille %d vers l'adresse %s\n", sent_size, addr.addr);
+            hp = gethostbyname(addr.addr);
+            memcpy (&(remote_addr.sin_addr.s_addr), hp->h_addr, hp->h_length);
+            sent_size = sendto(sys_socket, tmp.data, tmp.size, 0, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr));
+            printf("[MICTCP-CORE] Envoi d'un paquet IP de taille %d vers l'adresse %s\n", sent_size, addr.addr);
         } else {
            printf("[MICTCP-CORE] Perte du paquet\n");
         }
-
         free (tmp.data);
 
         /* Correct the sent size */

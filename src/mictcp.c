@@ -370,9 +370,7 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
       printf("[MIC-TCP] Envoi du PDU avec numéro de séquence : %d\n", pdu.header.seq_num);
       effective_ip_send = IP_send(pdu, socket_list[mic_sock].remote_addr.ip_addr); // On envoie le PDU sur la couche IP
       // Erreur lors de l'envoi du PDU
-      printf("[MIC-TCP] post-Envoi du PDU sur la couche IP\n");
       if (effective_ip_send == -1) return -1;
-
       //? Ajouter le paquet à la fenêtre glissante
       if (premier_envoi) { // on l'ajoute qu'une seule fois
          add_sent_packet(mic_sock); 
