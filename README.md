@@ -82,11 +82,16 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 
 ### ✅ Version 4 : MICTCP-v4
 #### ✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)
+🚧 Problème de segmentation fault
 Fonctionnalité : Phase de connexion et négociation du taux de perte
 
 - ✔️ Ajout d’une phase de connexion handshake avec un échange de SYN SYN_ACK et ACK
 - ✔️ Négociation du taux de perte entre client et serveur (le handshake permet l'échange du taux de perte admissible dans le SYN)
 - ✔️ Attente passive du client pour l'acceptation des connexions (modification de la structure `mic_tcp_sock` avec des champs mutex et variables conditionnelles)
+
+> [!NOTE] 
+> Le mécanisme de la V4.1 est basé sur l'établissement d'une connexion avant l'échange de données, similaire à TCP. Cependant, un problème a été rencontré lors de l'implémentation.
+> Après la réception du SYN ACK, le client envoie un unique ACK. Si cet ACK est perdu, le timer côté client se déclenche car il ne reçoit pas d'ACK. Il renvoie alors un SYN-ACK, mais ce SYN-ACK n'est plus traité par le client, car il a déjà validé sa connexion. En conséquence, le serveur boucle sur l'envoi du SYN ACK.
 
 #### ❌ Version 4.2 : MICTCP-v4.2
 Non implémentée.
