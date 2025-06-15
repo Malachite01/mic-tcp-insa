@@ -17,6 +17,7 @@
 #define MAX_SOCKETS 1024 // Nombre maximum de sockets MIC-TCP
 #define MAX_TIMEOUT 100 // Timeout pour la réception d'un ACK en µs
 #define WINDOW_SIZE 10 // Taille de la fenêtre glissante
+#define REAL_LOSS 20 // Taux de perte acceptable en % (modifiable)
 #define DEFAULT_ACCEPTABLE_LOSS 20 // Taux de perte acceptable en % (modifiable)
 
 
