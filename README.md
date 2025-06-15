@@ -85,10 +85,11 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 Fonctionnalité : Phase de connexion et négociation du taux de perte
 
 - ✔️ Ajout d’une phase de connexion handshake avec un échange de SYN SYN_ACK et ACK
-- ✔️ Négociation du taux de perte entre client et serveur (le handshake permet l'échange du taux de perte admissible)
+- ✔️ Négociation du taux de perte entre client et serveur (le handshake permet l'échange du taux de perte admissible dans le SYN)
 - ✔️ Attente passive du client pour l'acceptation des connexions (modification de la structure `mic_tcp_sock` avec des champs mutex et variables conditionnelles)
 
 #### ❌ Version 4.2 : MICTCP-v4.2
+Non implémentée.
 
 ## 🛠 Compilation
 
