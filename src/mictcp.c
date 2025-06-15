@@ -274,6 +274,8 @@ int mic_tcp_connect(int socket, mic_tcp_sock_addr addr) {
    if (verif_socket(socket) == -1 || verif_address(addr) == -1) return -1;
 
    socket_list[socket].state = IDLE;
+   // Assigner l'adresse distante au socket
+   socket_list[socket].remote_addr = addr;
 
    //? Tant que la connexion n'est pas établie (pas de ACK), on envoie un SYN
    while (socket_list[socket].state != ESTABLISHED) {
@@ -413,10 +415,6 @@ int mic_tcp_send (int mic_sock, char* mesg, int mesg_size) {
       debug_window(mic_sock);
       printf("[MIC-TCP] Numéro de séquence actuel pour le socket %d\n", next_sequence[mic_sock]);
    }
-
-   // Libération de la mémoire allouée
-   free(local_addr_ack.addr);
-   free(remote_addr_ack.addr);
    return effective_ip_send; // Retourne la taille des données envoyées (return -1 en cas d'erreur)    
 }
 
@@ -499,7 +497,11 @@ void process_received_PDU(mic_tcp_pdu pdu, mic_tcp_ip_addr local_addr, mic_tcp_i
          // Si on recoit un ACK pour le SYN-ACK
          if (result != -1 && pdu_recv.header.ack == 1 && pdu_recv.header.syn == 0) { 
             printf("[MIC-TCP] ACK reçu pour le SYN-ACK\n");
+
             pthread_mutex_lock(&socket_list[fd].mutex);
+            //Assigner l'adresse distante au socket
+            socket_list[fd].remote_addr.port = pdu.header.source_port;
+            socket_list[fd].remote_addr.ip_addr = remote_addr;
             socket_list[fd].state = ESTABLISHED; // On change l'état du socket
             pthread_cond_signal(&socket_list[fd].cond);  // Réveille le thread en attente
             pthread_mutex_unlock(&socket_list[fd].mutex);
