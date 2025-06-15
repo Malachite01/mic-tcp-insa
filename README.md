@@ -82,8 +82,8 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 
 ### ✅ Version 4 : MICTCP-v4
 #### ✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)
-Fonctionnalité : Phase de connexion et négociation du taux de perte
 🚧 Problème de segmentation fault
+Fonctionnalité : Phase de connexion et négociation du taux de perte
 
 - ✔️ Ajout d’une phase de connexion handshake avec un échange de SYN SYN_ACK et ACK
 - ✔️ Négociation du taux de perte entre client et serveur (le handshake permet l'échange du taux de perte admissible dans le SYN)
