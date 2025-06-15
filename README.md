@@ -7,7 +7,7 @@
     - [✅ Version 2 : MICTCP-v2](#-version-2--mictcp-v2)
     - [✅ Version 3 : MICTCP-v3](#-version-3--mictcp-v3)
     - [✅ Version 4 : MICTCP-v4](#-version-4--mictcp-v4)
-      - [✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)](#-version-41--mictcp-v41-wip-)
+      - [✅ Version 4.1 : MICTCP-v4.1](#-version-41--mictcp-v41)
       - [❌ Version 4.2 : MICTCP-v4.2](#-version-42--mictcp-v42)
   - [🛠 Compilation](#-compilation)
   - [📚 Exemple d'utilisation](#-exemple-dutilisation)
@@ -81,8 +81,7 @@ Fonctionnalité : Mécanisme de fiabilité avec taux de perte configurable
 > En d’autres termes, le second échange "corrige" le désalignement du premier.
 
 ### ✅ Version 4 : MICTCP-v4
-#### ✅ Version 4.1 : MICTCP-v4.1 (WIP 🚧)
-🚧 Problème de segmentation fault
+#### ✅ Version 4.1 : MICTCP-v4.1
 Fonctionnalité : Phase de connexion et négociation du taux de perte
 
 - ✔️ Ajout d’une phase de connexion handshake avec un échange de SYN SYN_ACK et ACK
