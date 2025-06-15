@@ -2,17 +2,16 @@
 #include <api/mictcp_core.h>
 
 //! Parametres globaux définis dans mictcp.h
-
 sliding_window_t loss_window[MAX_SOCKETS]; // Fenêtre glissante pour chaque socket
+int loss_rate = REAL_LOSS; // Taux de perte réel utilisé pour simuler les pertes
 int acceptable_loss_rate =  DEFAULT_ACCEPTABLE_LOSS; // Taux de perte par défaut (20%)
 
 mic_tcp_sock socket_list[MAX_SOCKETS]; //Liste des sockets MIC-TCP 
 int last_used_socket = 0; // Dernier socket utilisé
 int next_sequence[MAX_SOCKETS] = {0}; // Numéro de séquence du prochain PDU à émettre
 
-
 /*
- * Fonction d'affichage du nom de la fonction
+ * Fonction pour afficher le nom de la fonction passée en paramètre
  */
 void print_func_name(const char* func_name) {
    printf("[MIC-TCP] Appel de la fonction: %s\n", func_name);
@@ -20,7 +19,7 @@ void print_func_name(const char* func_name) {
 
 
 //!     ___________________________
-//!    |_PARTIE_FENETRE_GLISSANTE_|
+//!    |_PARTIE_FENETRE_GLISSANTE_| (structure définie dans mictcp.h)
 
 /*
  * Initialise la fenêtre glissante pour un socket
@@ -70,7 +69,7 @@ void mark_ack_received(int socket) {
    sliding_window_t *window = &loss_window[socket];
    
    // Marquer l'ACK pour le dernier paquet envoyé
-   int last_sent_index = (window->window_index - 1 + WINDOW_SIZE) % WINDOW_SIZE;
+   int last_sent_index = (window->window_index - 1 + WINDOW_SIZE) % WINDOW_SIZE; // Modulo pour gérer l'index circulaire
    window->ack_received[last_sent_index] = 1;
    
    printf("[MIC-TCP] Socket %d: ACK marqué comme reçu\n", socket);
